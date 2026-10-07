@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iSpring → GIFT: конвертер тестов для Teachbase</title>
+<style>
+  :root {
+    --accent: #2563eb;
+    --accent-dark: #1d4ed8;
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --ok: #16a34a;
+    --warn: #d97706;
+    --err: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.5;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 24px; }
+  h1 { font-size: 1.6rem; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0; }
+  .card {
+    background: var(--card); border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 24px; margin-bottom: 20px;
+  }
+  #drop {
+    border: 2px dashed #c7d2fe; border-radius: 12px;
+    padding: 48px 24px; text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  #drop:hover, #drop.over { border-color: var(--accent); background: #eff6ff; }
+  #drop .big { font-size: 1.15rem; font-weight: 600; margin-bottom: 6px; }
+  #drop .small { color: var(--muted); font-size: .9rem; }
+  #file { display: none; }
+  .item { border-top: 1px solid #e5e7eb; padding: 14px 0; }
+  .item:first-child { border-top: none; }
+  .item .name { font-weight: 600; word-break: break-all; }
+  .item .meta { color: var(--muted); font-size: .85rem; margin: 2px 0 8px; }
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 999px;
+    font-size: .8rem; font-weight: 600; margin-right: 6px;
+  }
+  .badge.ok { background: #dcfce7; color: var(--ok); }
+  .badge.err { background: #fee2e2; color: var(--err); }
+  .stats { margin: 6px 0; font-size: .85rem; color: var(--muted); }
+  .stats .types { margin-top: 4px; }
+  .stats .types span { display: inline-block; margin: 2px 6px 2px 0; }
+  .success {
+    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+    padding: 10px 14px; margin: 8px 0; font-size: .85rem; color: #166534;
+  }
+  .warnings {
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+    padding: 10px 14px; margin: 8px 0; font-size: .85rem; color: #92400e;
+  }
+  .warnings div { margin: 2px 0; }
+  a.btn {
+    display: inline-block; background: var(--accent); color: #fff;
+    padding: 8px 18px; border-radius: 8px; text-decoration: none;
+    font-weight: 600; font-size: .9rem; margin-top: 6px;
+  }
+  a.btn:hover { background: var(--accent-dark); }
+  .info h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  .info ul { margin: 0; padding-left: 20px; }
+  .info li { margin: 5px 0; font-size: .92rem; }
+  details { margin-top: 24px; font-size: .9rem; color: var(--muted); }
+  summary { cursor: pointer; font-weight: 600; color: var(--text); }
+  details ol { padding-left: 20px; }
+  details li { margin: 4px 0; }
+  code { background: #eef2ff; padding: 1px 5px; border-radius: 4px; }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Конвертер тестов iSpring → GIFT</h1>
+    <p class="sub">Перетащите файл <code>.quiz</code> (iSpring QuizMaker) — получите файл для импорта в Teachbase.<br>Конвертация происходит целиком в вашем браузере, файлы никуда не отправляются.</p>
+  </header>
+
+  <div class="card">
+    <div id="drop">
+      <div class="big">Перетащите сюда .quiz файл</div>
+      <div class="small">или нажмите, чтобы выбрать файл на компьютере · можно несколько файлов сразу</div>
+    </div>
+    <input id="file" type="file" multiple accept=".quiz,.zip">
+  </div>
+
+  <div class="card" id="results" style="display:none">
+    <h2 style="font-size:1.1rem;margin:0 0 10px">Результаты</h2>
+    <div id="list"></div>
+  </div>
+
+  <div class="card info">
+    <h2>Что конвертер умеет</h2>
+    <ul>
+      <li>Преобразует тест iSpring QuizMaker (<code>.quiz</code>) в файл формата GIFT для импорта в Teachbase — одиночный и множественный выбор, верно/неверно, свободный ответ, числовой вопрос, соответствие, упорядочивание, эссе.</li>
+      <li>Сохраняет группы вопросов iSpring как категории GIFT (<code>$CATEGORY</code>).</li>
+      <li>Переносит картинки из вопросов в ZIP-архив и подключает их блоком <code>[files]</code>.</li>
+      <li>Экранирует специальные символы GIFT и защищает от типовых ошибок, из-за которых Teachbase отклоняет весь файл импорта.</li>
+      <li>Обрабатывает несколько файлов подряд: перетащите сразу все тесты.</li>
+    </ul>
+  </div>
+
+  <div class="card info">
+    <h2>Ограничения</h2>
+    <ul>
+      <li>Вопросы «укажи область на картинке», «банк слов», «перетаскивание» и шкала Ликерта в GIFT не представимы — они пропускаются с предупреждением в карточке результата.</li>
+      <li>Числовые вопросы конвертируются без допуска (верен только точный ответ) — проверьте их после импорта.</li>
+      <li>Обратная связь за ответ, баллы за вопрос, перемешивание вариантов и лимиты времени GIFT не переносит — настраивается в редакторе теста Teachbase после импорта.</li>
+      <li>Работа конвертера не гарантируется для тестов из старых версий iSpring: типы вопросов, которых не было в проверенных файлах, конвертируются по эвристикам — сверяйте результат с оригиналом.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>Как загрузить результат в Teachbase</summary>
+      <ol>
+        <li>Создайте тест (в курсе или материал «Тест» нового типа).</li>
+        <li>Откройте импорт в формате GIFT и выберите скачанный файл:
+          <code>.txt</code> — для теста в курсе, <code>.zip</code> — для теста нового типа (с картинками).</li>
+        <li>В тестах нового типа выберите режим «Заменить вопросы», если тест пустой.</li>
+        <li>Проверьте вопросы после импорта: баллы, перемешивание и лимиты времени GIFT не переносит.</li>
+      </ol>
+    </details>
+  </div>
+
+  <footer>Работает полностью в браузере · исходники: quiz2gift.js</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="quiz2gift.js"></script>
+<script>
+(function () {
+  var drop = document.getElementById("drop");
+  var fileInput = document.getElementById("file");
+  var results = document.getElementById("results");
+  var list = document.getElementById("list");
+
+  drop.addEventListener("click", function () { fileInput.click(); });
+  ["dragover", "dragenter"].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("over"); });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("over"); });
+  });
+  drop.addEventListener("drop", function (e) {
+    handle(e.dataTransfer.files);
+  });
+  fileInput.addEventListener("change", function () { handle(fileInput.files); });
+
+  async function handle(files) {
+    for (var i = 0; i < files.length; i++) {
+      await convertOne(files[i]);
+    }
+  }
+
+  async function convertOne(f) {
+    results.style.display = "block";
+    var item = document.createElement("div");
+    item.className = "item";
+    item.innerHTML = '<div class="name"></div><div class="meta">Конвертация…</div>';
+    item.querySelector(".name").textContent = f.name;
+    list.appendChild(item);
+    var meta = item.querySelector(".meta");
+
+    try {
+      var buf = await f.arrayBuffer();
+      var r = await Quiz2Gift.convert(buf, f.name);
+      var url = URL.createObjectURL(new Blob([r.payload], {
+        type: r.isZip ? "application/zip" : "text/plain;charset=utf-8"
+      }));
+
+      var total = Object.keys(r.stats)
+        .filter(function (k) { return k.indexOf("проп") !== 0; })
+        .reduce(function (s, k) { return s + r.stats[k]; }, 0);
+      var skipped = Object.keys(r.stats)
+        .filter(function (k) { return k.indexOf("проп") === 0; })
+        .reduce(function (s, k) { return s + r.stats[k]; }, 0);
+      var typeNames = {
+        MultipleChoice: "одиночный выбор",
+        MultipleResponse: "множественный выбор",
+        TrueFalse: "верно/неверно",
+        FillInTheBlank: "свободный ответ",
+        ShortAnswer: "свободный ответ",
+        Numeric: "числовой",
+        Matching: "соответствие",
+        Sequence: "упорядочивание",
+        Essay: "эссе"
+      };
+      var typesHtml = Object.keys(r.stats)
+        .filter(function (k) { return r.stats[k] > 0 && k.indexOf("проп") !== 0; })
+        .map(function (k) {
+          return "<span>· " + (typeNames[k] || k) + ": " + r.stats[k] + "</span>";
+        })
+        .join("");
+
+      var html = '<span class="badge ok">Сконвертировано</span>' +
+        '<div class="stats">Вопросов: ' + total + (skipped ? " · пропущено: " + skipped : "") +
+        (typesHtml ? '<div class="types">' + typesHtml + "</div>" : "") + "</div>" +
+        '<a class="btn" href="' + url + '" download="' + r.filename + '">Скачать ' +
+        (r.isZip ? "ZIP-архив" : "GIFT-файл") + "</a>";
+      if (r.warnings.length) {
+        html += '<div class="warnings"><b>Потребует внимания после импорта — предупреждения (' +
+          r.warnings.length + '):</b>' +
+          r.warnings.map(function (w) { return "<div>! " + escapeHtml(w) + "</div>"; }).join("") + "</div>";
+      } else {
+        html += '<div class="success">Все вопросы успешно сконвертированы, ' +
+          (skipped ? "исключения перечислены выше. " : "") +
+          "ручной доработки после импорта не требуется.</div>";
+      }
+      meta.innerHTML = html;
+    } catch (err) {
+      meta.innerHTML = '<span class="badge err">ошибка</span> ' + escapeHtml(err.message || String(err));
+    }
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+})();
+</script>
+</body>
+</html>
